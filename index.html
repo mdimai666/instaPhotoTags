@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+        integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
+    <title>Title</title>
+</head>
+
+<body>
+
+    <div class="container-fluid">
+        <div class="p-5">
+            <h1>
+                Insta
+            </h1>
+            <p></p>
+            <p></p>
+            <p></p>
+            <!-- !!!!!!!!! -->
+
+            <div class="row justify-content-center">
+                <div class="form-group form-inline">
+                    <input type="text" class="form-control" name="" id="input1" aria-describedby="helpId"
+                        placeholder="username" value="">
+                    <button id="btnFind1" type="submit" class="btn btn-primary px-5">Find</button>
+                </div>
+                <p></p>
+            </div>
+            <div class="row">
+                <div class="col-8">
+                    <div id="content">
+
+                        <div id="template">
+                            <div class="item1">
+                                <div class="row">
+                                    <div class="col-3">
+                                        <div class="photo">
+                                            <img src="" alt="">
+                                        </div>
+                                    </div>
+                                    <div class="col-9">
+                                        <div class="text">
+                                            2
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+                <div class="col-4 list1">
+                    <div class="row" style="background: rgb(233, 233, 233);border-bottom: 1px solid black;">
+                        <div class="col-8">
+                            Критерий
+                        </div>
+                        <div class="col-4">
+                            Частота
+                        </div>
+                    </div>
+
+                    <div id="list-content1">
+
+                        <div id="template2">
+                            <div class="item2">
+                                <div class="row">
+                                    <div class="col-8">
+                                        <div class="text">
+                                            text
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="count">
+                                            col
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- !!!!!!!!! -->
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.3.1/js/bootstrap.min.js"></script>
+
+
+    <script>
+        $(document).ready(() => {
+
+            let load = `<div class="text-center"><i class="fa fa-2x fa-cog fa-spin"></i></div>`;
+
+
+            $('#btnFind1').click(function () {
+                let username = $('#input1').val();
+                findAccound(username);
+            })
+
+            function getMediaShare(username, callback_mediaShare) {
+                let url = `https://www.instagram.com/${username}`;
+
+                $.get(url, d => {
+
+                    localStorage.setItem('html', d);
+                    localStorage.setItem('username', username);
+
+                    let script = d.match(/<script(.*?)>(.*?)<\/script>/)[2];
+                    let mediaShare = JSON.parse(script.substr(21).slice(0, -1));
+
+                    callback_mediaShare(mediaShare);
+
+                });
+            }
+
+            function findAccound(username) {
+
+                well.html('');
+                list1.html('');
+                $('#content').html(load);
+
+                getMediaShare(username, mediaShare => {
+
+                    well.html('');
+
+                    let User = mediaShare.entry_data.ProfilePage[0].graphql.user;
+
+                    let Posts = User.edge_owner_to_timeline_media.edges.map(s => s.node);
+
+                    drawPosts(Posts);
+                });
+            }
+
+            let template = $('#template').html();
+            let well = $('#content');
+            well.html('');
+
+            let template2 = $('#template2').html();
+            let list1 = $('#list-content1');
+            list1.html('');
+
+            function addPost(imgsrc, text) {
+                let t = $(template);
+
+                t.find('.photo img').attr('src', imgsrc);
+                t.find('.text').text(text);
+
+                well.append(t);
+            }
+
+
+            function addListItem(f1, f2) {
+                let t = $(template2);
+
+                t.find('.text').text(f1)
+                t.find('.count').text(f2);
+
+                list1.append(t);
+            }
+
+            function drawPosts(Posts) {
+
+                let alts = [];
+
+                for (let e of Posts) {
+                    addPost(e.thumbnail_resources[0].src, e.accessibility_caption);
+                }
+
+                for (let e of Posts) {
+                    let cap = e.accessibility_caption?e.accessibility_caption:'';
+                    cap = cap.replace('На данном изображении может находиться: ', '');
+                    alts.push(cap);
+
+                }
+
+                let list = [];
+
+                for (let cap of alts.filter(s=>s).filter(onlyUnique)) {
+
+                    list.push({
+                        text: cap,
+                        count: alts.filter(s => s == cap).length
+                    })
+
+                }
+
+                list = list.sort(dynamicSort('-count'));
+                
+                list.forEach(s=>{
+
+                    addListItem(s.text, s.count);
+                })
+
+            }
+
+            ///
+            let d = localStorage.getItem('html');
+
+            $('#input1').val(localStorage.getItem('username'));
+
+            {
+                let script = d.match(/<script(.*?)>(.*?)<\/script>/)[2];
+                let mediaShare = JSON.parse(script.substr(21).slice(0, -1));
+
+                let User = mediaShare.entry_data.ProfilePage[0].graphql.user;
+                let Posts = User.edge_owner_to_timeline_media.edges.map(s => s.node);
+
+                drawPosts(Posts);
+            }
+
+            
+        });
+
+        function onlyUnique(value, index, self) {
+            return self.indexOf(value) === index;
+        }
+
+        function dynamicSort(property) {
+            var sortOrder = 1;
+            if (property[0] === "-") {
+                sortOrder = -1;
+                property = property.substr(1);
+            }
+            return function (a, b) {
+                var result = (a[property] < b[property]) ? -1 : (a[property] > b[property]) ? 1 : 0;
+                return result * sortOrder;
+            }
+        }
+
+    </script>
+
+    <style>
+        .list1 {
+            border: 1px solid black;
+        }
+
+        .item1 .photo img {
+            padding: 10px;
+        }
+
+        .item1:nth-child(2n) {
+            background: whitesmoke;
+        }
+
+        .item2:nth-child(2n) {
+            background: whitesmoke;
+        }
+    </style>
+
+</body>
+
+</html>
